@@ -1,0 +1,11 @@
+This is the code for Example 2 with output functional J3 in the paper of Mixed-DWR
+
+The .h files are in the ./include.
+The example file is in the ./example.
+
+Enter into ./example/Example2_with_J3
+execute:
+make
+./run.sh D.1 0
+//D.1 represents the mesh is obtained by global refining the template D.d mesh 2 times.
+
