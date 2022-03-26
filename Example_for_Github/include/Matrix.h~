@@ -1,0 +1,91 @@
+#ifndef _Matrix_h_
+#define _Matrix_h_
+
+#include <AFEPack/BilinearOperator.h>
+#include <AFEPack/Functional.h>
+#include <AFEPack/Operator.h>
+#include <AFEPack/TemplateElement.h>
+#include <AFEPack/FEMSpace.h>
+#include <AFEPack/Geometry.h>
+#include <AFEPack/HGeometry.h>
+#include <AFEPack/DGFEMSpace.h>
+#include "Options.h"
+
+template<typename value_type>
+class Matrix : public StiffMatrix<DIM,double>
+{
+public:
+  Matrix(){};
+  Matrix(FEMSpace<double,DIM>& sp) :
+    StiffMatrix<DIM,double>(sp){};
+  virtual ~Matrix(){};
+public:
+  virtual void
+  getElementMatrix(const Element<double,DIM>& element0,
+		   const Element<double,DIM>& element1,
+		   const ActiveElementPairIterator<DIM>::State state);
+};
+
+template<>
+void Matrix<double>::getElementMatrix(const Element<double,DIM>& element0,
+				      const Element<double,DIM>& element1,
+				      const ActiveElementPairIterator<DIM>::State state)
+{
+  const std::vector<int>& ele_dof0 = element0.dof();
+  const std::vector<int>& ele_dof1 = element1.dof();
+  int n_element_dof0 = ele_dof0.size();
+  int n_element_dof1 = ele_dof1.size();
+  double volume = element0.templateElement().volume();
+  const int& alg_acc = this->algebricAccuracy();
+  const QuadratureInfo<DIM>& quad_info = element0.findQuadratureInfo(ACC);
+  std::vector<double> jacobian = element0.local_to_global_jacobian(quad_info.quadraturePoint());
+  int n_quadrature_point = quad_info.n_quadraturePoint();
+  std::vector<AFEPack::Point<DIM> > q_point = element0.local_to_global(quad_info.quadraturePoint());
+  std::vector<std::vector<std::vector<double> > > basis_gradient = element0.basis_function_gradient(q_point);
+  //std::vector<std::vector<std::vector<typename StiffMatrix::value_type> > > basis_gradient = element0.basis_function_gradient(q_point);
+  for (int l = 0;l < n_quadrature_point;l ++)
+    {
+    //double Jxw = quad_info.weight(l)*jacobian[l]*volume;
+      double Jxw = quad_info.weight(l)*jacobian[l]*volume;
+      for (int j = 0;j < n_element_dof0;j ++)
+	{
+	  for (int k = 0;k < n_element_dof1;k ++)
+	    {
+	      elementMatrix(j,k) += Jxw*innerProduct(basis_gradient[j][l],basis_gradient[k][l]);
+	    }
+	}
+    }
+}
+
+template<>
+void Matrix<float>::getElementMatrix(const Element<double,DIM>& element0,
+				      const Element<double,DIM>& element1,
+				      const ActiveElementPairIterator<DIM>::State state)
+{
+  const std::vector<int>& ele_dof0 = element0.dof();
+  const std::vector<int>& ele_dof1 = element1.dof();
+  int n_element_dof0 = ele_dof0.size();
+  int n_element_dof1 = ele_dof1.size();
+  double volume = element0.templateElement().volume();
+  const int& alg_acc = this->algebricAccuracy();
+  const QuadratureInfo<DIM>& quad_info = element0.findQuadratureInfo(alg_acc);
+  std::vector<double> jacobian = element0.local_to_global_jacobian(quad_info.quadraturePoint());
+  int n_quadrature_point = quad_info.n_quadraturePoint();
+  std::vector<AFEPack::Point<DIM> > q_point = element0.local_to_global(quad_info.quadraturePoint());
+  std::vector<std::vector<std::vector<double> > > basis_gradient = element0.basis_function_gradient(q_point);
+  //std::vector<std::vector<std::vector<typename StiffMatrix::value_type> > > basis_gradient = element0.basis_function_gradient(q_point);
+  for (int l = 0;l < n_quadrature_point;l ++)
+    {
+    //double Jxw = quad_info.weight(l)*jacobian[l]*volume;
+      float Jxw = float(quad_info.weight(l))*float(jacobian[l])*float(volume);
+      for (int j = 0;j < n_element_dof0;j ++)
+	{
+	  for (int k = 0;k < n_element_dof1;k ++)
+	    {
+	      elementMatrix(j,k) += Jxw*float(innerProduct(basis_gradient[j][l],basis_gradient[k][l]));
+	    }
+	}
+    }
+}
+
+#endif
